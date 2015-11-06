@@ -22,7 +22,8 @@ function main() {
   var markers = L.layerGroup().addTo(map);
 
   // Load previously created records.
-  loadMarkers();
+  loadMarkers()
+    .then(syncServer);
 
   // Create marker on double-click.
   map.on('dblclick', function(event) {
@@ -32,12 +33,12 @@ function main() {
         // Add marker to map.
         addMarker(result.data);
       })
-      .then(publishChange);
+      .then(syncServer);
   });
 
   function loadMarkers() {
     markers.eachLayer(map.removeLayer.bind(map));
-    store.list()
+    return store.list()
       .then(function(results) {
         // Add each marker to map.
         results.data.map(addMarker);
@@ -56,10 +57,10 @@ function main() {
         // Remove clicked layer from map.
         map.removeLayer(event.target);
       })
-      .then(publishChange);
+      .then(syncServer);
   }
 
-  function publishChange() {
+  function syncServer() {
     store.sync()
       .then(function (result) {
         if (result.ok) {
