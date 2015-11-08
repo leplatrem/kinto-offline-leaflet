@@ -13,7 +13,7 @@ function main() {
   // Initialize map centered on my hometown.
   var map = L.map('map', {
     doubleClickZoom: false,
-    layers: [L.tileLayer('//{s}.tile.osm.org/{z}/{x}/{y}.png')],
+    layers: [L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png')],
     center: [48.49, 1.395],
     zoom: 16
   });
@@ -22,7 +22,11 @@ function main() {
   var markers = {};
 
   // Load previously created records.
-  loadMarkers()
+  store.list()
+    .then(function(results) {
+      // Add each marker to map.
+      results.data.map(addMarker);
+    })
     .then(syncServer);
 
   // Create marker on double-click.
@@ -36,29 +40,29 @@ function main() {
       .then(syncServer);
   });
 
-  function loadMarkers() {
-    return store.list()
-      .then(function(results) {
-        // Add each marker to map.
-        results.data.map(addMarker);
-      });
-  }
-
   function addMarker(record) {
-    var layer = L.marker(record.latlng)
-                 .addTo(map);
-    // Store marker reference by record id.
-    markers[record.id] = layer;
-    layer.on('click', deleteMarker.bind(undefined, record.id));
+    // Create new marker.
+    var marker = L.marker(record.latlng, {draggable: true})
+                  .addTo(map);
+    // Store reference by record id.
+    markers[record.id] = marker;
+
+    // Listen to events on marker.
+    marker.on('click', function () {
+      store.delete(record.id)
+        .then(removeMarker.bind(undefined, record))
+        .then(syncServer);
+    });
+    marker.on('dragend', function () {
+      record.latlng = marker.getLatLng();
+      store.update(record)
+        .then(syncServer);
+    });
   }
 
-  function deleteMarker(id) {
-    store.delete(id)
-      .then(function () {
-        // Remove clicked layer from map.
-        map.removeLayer(markers[id]);
-      })
-      .then(syncServer);
+  function removeMarker(record) {
+    map.removeLayer(markers[record.id]);
+    delete markers[record.id];
   }
 
   function syncServer() {
@@ -66,12 +70,10 @@ function main() {
     store.sync(options)
       .then(function (result) {
         if (result.ok) {
-          // Add newly created records.
+          // Add markers for newly created records.
           result.created.map(addMarker);
           // Remove markers of deleted records.
-          result.deleted.map(function (record) {
-            map.removeLayer(markers[record.id]);
-          });
+          result.deleted.map(removeMarker);
         }
       })
       .catch(function (err) {
