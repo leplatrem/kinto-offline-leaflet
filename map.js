@@ -48,7 +48,7 @@ function main() {
     markers[record.id] = marker;
 
     // Listen to events on marker.
-    marker.on('click', function () {
+    marker.on('dblclick', function () {
       store.delete(record.id)
         .then(removeMarker.bind(undefined, record))
         .then(syncServer);
@@ -58,6 +58,10 @@ function main() {
       store.update(record)
         .then(syncServer);
     });
+  }
+
+  function updateMarker(record) {
+    markers[record.id].setLatLng(record.latlng);
   }
 
   function removeMarker(record) {
@@ -72,6 +76,8 @@ function main() {
         if (result.ok) {
           // Add markers for newly created records.
           result.created.map(addMarker);
+          // Move updated markers.
+          result.updated.map(updateMarker);
           // Remove markers of deleted records.
           result.deleted.map(removeMarker);
         }
