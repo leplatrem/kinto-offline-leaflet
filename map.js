@@ -54,8 +54,12 @@ function main() {
         .then(syncServer);
     });
     marker.on('dragend', function () {
-      record.latlng = marker.getLatLng();
-      store.update(record)
+      var newlatlng = {latlng: marker.getLatLng()};
+      store.get(record.id)
+        .then(function (result) {
+          var newrecord = Object.assign(result.data, newlatlng);
+          return store.update(newrecord);
+        })
         .then(syncServer);
     });
   }
