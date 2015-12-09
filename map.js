@@ -88,7 +88,7 @@ function main() {
       })
       .catch(function (err) {
         // Special treatment since the demo server is flushed.
-        if (err.message.contains("flushed")) {
+        if (/flushed/.test(err.message)) {
           // Mark every local record as «new» and re-upload.
           return store.resetSyncStatus()
             .then(syncServer);
