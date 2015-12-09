@@ -93,6 +93,11 @@ function main() {
           return store.resetSyncStatus()
             .then(syncServer);
         }
+        // Ignore network errors (offline)
+        if (/HTTP 0/.test(err.message)) {
+          console.log('Sync aborted (cannot reach server)');
+          return;
+        }
         throw err;
       });
   }
